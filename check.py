@@ -7,7 +7,7 @@ client = chromadb.PersistentClient(
 )
 
 # Create or get a collection for storing embeddings
-collection_name = "markdown_chunks"
+collection_name = "TechnologyGuidelines"
 
 collection = client.get_collection(name=collection_name)
 
@@ -19,4 +19,5 @@ for doc, metadata in zip(documents['documents'], documents['metadatas']):
     print("Document ID:", metadata.get('id', 'N/A'))
     print("Content:", doc)
     print("Metadata:", metadata)
+    print("Embedding:", documents['embeddings'])
     print("-" * 80)

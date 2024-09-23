@@ -1,22 +1,18 @@
 import os
 import glob
-import chromadb
-from datetime import datetime
 from langchain.text_splitter import MarkdownTextSplitter
-from langchain_nomic import NomicEmbeddings
-from langchain_ollama import OllamaEmbeddings
 
-# Set up ChromaDB client
-client = chromadb.PersistentClient(
-    path="./chroma_db",
-    settings=chromadb.config.Settings(allow_reset=True)
+from chroma_db_handler import ChromaDBHandler
+
+# Initialize the ChromaDBHandler
+
+chroma_db_handler = ChromaDBHandler(
+    model_name="nomic-embed-text",
+    embedding_url="http://localhost:11434/api/embeddings",
+    db_path="./chroma_db",
+    collection_name="TechnologyGuidelines",
+    allow_reset=True
 )
-
-# Create or get a collection for storing embeddings
-collection_name = "markdown_chunks"
-collection = client.create_collection(name=collection_name,get_or_create=True)
-
-collection.add(ids=["id1"], embeddings=[[0]*768], documents=["test"], metadatas=[{"file_name": "test.md", "timestamp": datetime.now().isoformat()}])
 
 # Initialize the Markdown text splitter
 text_splitter = MarkdownTextSplitter()
@@ -24,9 +20,6 @@ text_splitter = MarkdownTextSplitter()
 # Initialize the Nomic embeddings model
 # embeddings_model = NomicEmbeddings(model="nomic-embed-text", inference_mode="local")
 
-embeddings_model = OllamaEmbeddings(
-    model="nomic-embed-text",
-)
 
 def read_markdown_files(directory):
     """Recursively read all markdown files in a directory."""
@@ -43,19 +36,9 @@ def process_markdown_file(file_path):
 
     # Generate embeddings for each chunk and store them in ChromaDB
     for i, chunk in enumerate(chunks):
-        embedding_vector = embeddings_model.embed_query(chunk)
-
-        print(f"Chunk {i}:", chunk)
-        print("Embedding shape:", embedding_vector)
-
         
         # Add chunk and its embedding to the ChromaDB collection
-        collection.add(
-            documents=[chunk],
-            ids=[f"{file_path}_chunk_{i}"],
-            embeddings=[embedding_vector],
-            metadatas=[{"file_name": os.path.basename(file_path), "timestamp": datetime.now().isoformat()}]
-        )
+        chroma_db_handler.add_chunk(file_path=file_path, chunk=chunk, i=i)
 
 def main(directory):
     """Main function to read markdown files and process them."""
@@ -67,5 +50,6 @@ def main(directory):
 
 if __name__ == "__main__":
     # Specify the directory containing markdown files here
-    directory_to_process = os.getcwd() #"./markdown_files"  # Change this to your target directory
+    # directory_to_process = os.getcwd() #"./markdown_files"  # Change this to your target directory
+    directory_to_process = "/Users/D046675/dev-local/TechnologyGuidelines"
     main(directory_to_process)
