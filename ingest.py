@@ -1,29 +1,28 @@
 import os
 import glob
 from langchain.text_splitter import MarkdownTextSplitter
+from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
+from langchain_core.documents import Document
 
-from chroma_db_handler import ChromaDBHandler
 
-# Initialize the ChromaDBHandler
+embeddings = OllamaEmbeddings(
+    model="nomic-embed-text",
+)
 
-chroma_db_handler = ChromaDBHandler(
-    model_name="nomic-embed-text",
-    embedding_url="http://localhost:11434/api/embeddings",
-    db_path="./chroma_db",
+vector_store = Chroma(
     collection_name="TechnologyGuidelines",
-    allow_reset=True
+    embedding_function=embeddings,
+    persist_directory="./chroma_db",  # Where to save data locally, remove if not necessary
 )
 
 # Initialize the Markdown text splitter
 text_splitter = MarkdownTextSplitter()
 
-# Initialize the Nomic embeddings model
-# embeddings_model = NomicEmbeddings(model="nomic-embed-text", inference_mode="local")
-
 
 def read_markdown_files(directory):
     """Recursively read all markdown files in a directory."""
-    markdown_files = glob.glob(os.path.join(directory, '**', '*.md'), recursive=True)
+    markdown_files = glob.glob(os.path.join(directory, '**', 'README.md'), recursive=True)
     return markdown_files
 
 def process_markdown_file(file_path):
@@ -34,11 +33,12 @@ def process_markdown_file(file_path):
     # Split the content into chunks using MarkdownTextSplitter
     chunks = text_splitter.split_text(content)
 
-    # Generate embeddings for each chunk and store them in ChromaDB
-    for i, chunk in enumerate(chunks):
-        
-        # Add chunk and its embedding to the ChromaDB collection
-        chroma_db_handler.add_chunk(file_path=file_path, chunk=chunk, i=i)
+    docs = [Document(page_content=chunk, metadata={"file_path": file_path}) for chunk in chunks]
+
+    ids = [f"{os.path.basename(file_path)}_chunk_{i}" for i in range(len(chunks))]
+
+    vector_store.add_documents(documents=docs,ids=ids)
+
 
 def main(directory):
     """Main function to read markdown files and process them."""
