@@ -11,7 +11,8 @@ from IPython.display import display
 
 # LLM from Ollama
 # local_model = "llama3.1-70b-4096:latest"
-local_model = "llama3.1:latest"
+# local_model = "llama3.1:latest"
+local_model = "llama3.2:latest"
 # local_model = "gemma:7b"
 # local_model = "phi3.5:latest"
 llm = ChatOllama(model=local_model,num_ctx=32768)
@@ -58,9 +59,12 @@ The purpose of the meeting was that speaker Kai Merklein presented a software ar
 Your task is to clean the transcript. There might be wrongly transcribed words. 
 Infer the correct words from the surrounding context.
 You must not hallucinate.
-Work through the text sentence by sentence.
+Work through the entire text sentence by sentence.
 Generate cleansed output for each sentence and each paragraph.
-Keep the original length and all level of detail.
+Keep the full level of detail.
+Improve grammar, punctuation, and spelling.
+Improve the writing style. The goal is a text that could be presented as a speech by a professional speaker.
+You succeed when the entire text has be procssed and improved.
 </INSTRUCTION>
 
 <TEXT>
