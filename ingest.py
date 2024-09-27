@@ -5,51 +5,69 @@ from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
 from langchain_core.documents import Document
 
+class GroundingStore:
+    def __init__(
+        self,
+        directory,
+        collection_name="TechnologyGuidelines",
+        model="nomic-embed-text",
+        persist_directory="./chroma_db"
+    ):
+        """Initialize the MarkdownProcessor with embeddings, vector store, and text splitter."""
+        self.directory = directory
 
-embeddings = OllamaEmbeddings(
-    model="nomic-embed-text",
-)
+        # Initialize embeddings
+        self.embeddings = OllamaEmbeddings(model=model)
 
-vector_store = Chroma(
-    collection_name="TechnologyGuidelines",
-    embedding_function=embeddings,
-    persist_directory="./chroma_db",  # Where to save data locally, remove if not necessary
-)
+        # Initialize vector store
+        self.vector_store = Chroma(
+            collection_name=collection_name,
+            embedding_function=self.embeddings,
+            persist_directory=persist_directory,
+        )
 
-# Initialize the Markdown text splitter
-text_splitter = MarkdownTextSplitter()
+        # Initialize the Markdown text splitter
+        self.text_splitter = MarkdownTextSplitter()
 
+    def read_markdown_files(self):
+        """Recursively read all markdown files in the directory."""
+        markdown_files = glob.glob(
+            os.path.join(self.directory, '**', 'README.md'), recursive=True
+        )
+        return markdown_files
 
-def read_markdown_files(directory):
-    """Recursively read all markdown files in a directory."""
-    markdown_files = glob.glob(os.path.join(directory, '**', 'README.md'), recursive=True)
-    return markdown_files
+    def process_markdown_file(self, file_path):
+        """Process a single markdown file: split into chunks and store embeddings."""
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
 
-def process_markdown_file(file_path):
-    """Process a single markdown file: split into chunks and store embeddings."""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    # Split the content into chunks using MarkdownTextSplitter
-    chunks = text_splitter.split_text(content)
+        # Split the content into chunks using MarkdownTextSplitter
+        chunks = self.text_splitter.split_text(content)
 
-    docs = [Document(page_content=chunk, metadata={"file_path": file_path}) for chunk in chunks]
+        docs = [
+            Document(page_content=chunk, metadata={"file_path": file_path})
+            for chunk in chunks
+        ]
 
-    ids = [f"{os.path.basename(file_path)}_chunk_{i}" for i in range(len(chunks))]
+        ids = [
+            f"{os.path.basename(file_path)}_chunk_{i}" for i in range(len(chunks))
+        ]
 
-    vector_store.add_documents(documents=docs,ids=ids)
-
-
-def main(directory):
-    """Main function to read markdown files and process them."""
-    markdown_files = read_markdown_files(directory)
-    
-    for file_path in markdown_files:
-        process_markdown_file(file_path)
+        self.vector_store.add_documents(documents=docs, ids=ids)
         print(f"Processed {file_path}")
 
+    def process_all_files(self):
+        """Read all markdown files and process them."""
+        markdown_files = self.read_markdown_files()
+
+        for file_path in markdown_files:
+            self.process_markdown_file(file_path)
+
 if __name__ == "__main__":
-    # Specify the directory containing markdown files here
-    # directory_to_process = os.getcwd() #"./markdown_files"  # Change this to your target directory
-    directory_to_process = "/Users/D046675/dev-local/TechnologyGuidelines"
-    main(directory_to_process)
+    # Specify the directory containing markdown files
+
+    processor_tg = GroundingStore(directory="/Users/D046675/dev-local/TechnologyGuidelines", collection_name="TechnologyGuidelines")
+    processor_tg.process_all_files()
+
+    processor_das = GroundingStore(directory="/Users/D046675/dev-local/das-architecture", collection_name="DASArchitecture")
+    processor_das.process_all_files()
